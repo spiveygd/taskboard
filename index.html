@@ -1694,17 +1694,17 @@
         const ds = dateStatus(task.dueDate);
         const nc = (task.notes || []).length;
         return `<div class="task-card ${sc}" onclick="openTask('${task.id}')">
-        <div class="pri-dot p-${task.priority || "none"}"></div>
-        <div class="task-main">
-          <div class="task-title ${task.status === "completed" ? "done" : ""}">${esc(task.title)}</div>
-          <div class="task-sub">
-            <span class="badge ${sb2}">${STATUS_LABELS[task.status] || task.status}</span>
-            <span class="task-meta-chip">👤 ${esc(task.assignee || "Unassigned")}</span>
-            ${task.dueDate ? `<span class="task-meta-chip ${ds}">📅 Due ${fmtDate(task.dueDate)}</span>` : ""}
-            ${nc ? `<span class="task-meta-chip">💬 ${nc}</span>` : ""}
-          </div>
-        </div>
-      </div>`;
+    <div class="pri-dot p-${task.priority || "none"}"></div>
+    <div class="task-main">
+      <div class="task-title ${task.status === "completed" ? "done" : ""}">${esc(task.title)}</div>
+      <div class="task-sub">
+        <span class="badge ${sb2}">${STATUS_LABELS[task.status] || task.status}</span>
+        <span class="task-meta-chip">👤 ${esc(task.assignee || "Unassigned")}</span>
+        ${task.dueDate ? `<span class="task-meta-chip ${ds}">📅 Due ${fmtDate(task.dueDate)}</span>` : ""}
+        ${nc ? `<span class="task-meta-chip">💬 ${nc}</span>` : ""}
+      </div>
+    </div>
+  </div>`;
       }
 
       // ═══════════════════════════════════════════════
@@ -1728,10 +1728,10 @@
         document.getElementById("dash-sub").textContent =
           `${tasks.length} total tasks · ${inProg} in progress${over ? " · " + over + " overdue" : ""}`;
         document.getElementById("dash-stats").innerHTML = `
-        <div class="stat-card"><div class="stat-number">${tasks.length}</div><div class="stat-label">Total</div></div>
-        <div class="stat-card"><div class="stat-number" style="color:var(--warn)">${inProg}</div><div class="stat-label">In Progress</div></div>
-        <div class="stat-card"><div class="stat-number" style="color:var(--gold)">${open.length}</div><div class="stat-label">My Open</div></div>
-        <div class="stat-card"><div class="stat-number" style="color:${over ? "var(--danger)" : "var(--ok)"}">${over}</div><div class="stat-label">Overdue</div></div>`;
+    <div class="stat-card"><div class="stat-number">${tasks.length}</div><div class="stat-label">Total</div></div>
+    <div class="stat-card"><div class="stat-number" style="color:var(--warn)">${inProg}</div><div class="stat-label">In Progress</div></div>
+    <div class="stat-card"><div class="stat-number" style="color:var(--gold)">${open.length}</div><div class="stat-label">My Open</div></div>
+    <div class="stat-card"><div class="stat-number" style="color:${over ? "var(--danger)" : "var(--ok)"}">${over}</div><div class="stat-label">Overdue</div></div>`;
         const bar = document.getElementById("dash-overdue-bar");
         if (over > 0) {
           bar.className = "overdue-bar show";
@@ -1756,10 +1756,10 @@
               .slice(0, 6)
               .map(
                 (n) => `
-          <div class="card" style="padding:12px;cursor:pointer" onclick="openTask('${n.taskId || n.task_id}')">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${esc(n.author)} · ${timeAgo(n.created_at || n.date)} · <span style="color:var(--gold)">${esc(n.taskTitle)}</span></div>
-            <div style="font-size:12px;color:var(--text);line-height:1.5">${esc((n.text || "").slice(0, 120))}${(n.text || "").length > 120 ? "…" : ""}</div>
-          </div>`,
+      <div class="card" style="padding:12px;cursor:pointer" onclick="openTask('${n.taskId || n.task_id}')">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${esc(n.author)} · ${timeAgo(n.created_at || n.date)} · <span style="color:var(--gold)">${esc(n.taskTitle)}</span></div>
+        <div style="font-size:12px;color:var(--text);line-height:1.5">${esc((n.text || "").slice(0, 120))}${(n.text || "").length > 120 ? "…" : ""}</div>
+      </div>`,
               )
               .join("") +
             "</div>"
@@ -1853,19 +1853,19 @@
           (s) => {
             const col = tasks.filter((t) => t.status === s);
             return `<div class="kanban-col">
-          <div class="kanban-col-header"><div class="kanban-col-title">${STATUS_LABELS[s]}</div><div class="kanban-count">${col.length}</div></div>
-          ${col
-            .map(
-              (t) => `<div class="kanban-task" onclick="openTask('${t.id}')">
-            <div class="kanban-task-title">${esc(t.title)}</div>
-            <div class="kanban-task-foot">
-              <span style="font-size:10px;color:var(--muted)">${esc(t.assignee || "")}</span>
-              ${t.dueDate ? `<span style="font-size:10px" class="${dateStatus(t.dueDate)}">${fmtDate(t.dueDate)}</span>` : ""}
-            </div>
-          </div>`,
-            )
-            .join("")}
-        </div>`;
+      <div class="kanban-col-header"><div class="kanban-col-title">${STATUS_LABELS[s]}</div><div class="kanban-count">${col.length}</div></div>
+      ${col
+        .map(
+          (t) => `<div class="kanban-task" onclick="openTask('${t.id}')">
+        <div class="kanban-task-title">${esc(t.title)}</div>
+        <div class="kanban-task-foot">
+          <span style="font-size:10px;color:var(--muted)">${esc(t.assignee || "")}</span>
+          ${t.dueDate ? `<span style="font-size:10px" class="${dateStatus(t.dueDate)}">${fmtDate(t.dueDate)}</span>` : ""}
+        </div>
+      </div>`,
+        )
+        .join("")}
+    </div>`;
           },
         ).join("");
       }
@@ -1895,49 +1895,49 @@
               ];
 
         return `<div class="form-grid">
-        <div class="form-group span2">
-          <label class="lbl">Task Title</label>
-          <input type="text" id="ft-title" placeholder="What needs to be done?" value="${esc(t.title || "")}" ${!owned ? "disabled" : ""}>
-        </div>
-        <div class="form-group">
-          <label class="lbl">Status</label>
-          <select id="ft-status" ${!owned ? "disabled" : ""}>
-            ${STATUSES.map((s) => `<option value="${s}" ${(t.status || "idea") === s ? "selected" : ""}>${STATUS_LABELS[s]}</option>`).join("")}
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="lbl">Priority</label>
-          <select id="ft-priority" ${!owned ? "disabled" : ""}>
-            ${PRIORITIES.map((p) => `<option value="${p}" ${(t.priority || "none") === p ? "selected" : ""}>${p.charAt(0).toUpperCase() + p.slice(1)}</option>`).join("")}
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="lbl">Assigned To${isEdit && !owned ? ' <span style="color:var(--muted2)">(locked)</span>' : ""}</label>
-          ${
-            isEdit && !owned
-              ? `<input type="text" value="${esc(t.assignee || "")}" disabled><input type="hidden" id="ft-assignee" value="${esc(t.assignee || "")}">`
-              : `<select id="ft-assignee">${names.map((u) => `<option value="${u}" ${(t.assignee || currentUser?.name) === u ? "selected" : ""}>${u}</option>`).join("")}</select>`
-          }
-        </div>
-        <div class="form-group">
-          <label class="lbl">Start Date</label>
-          <input type="date" id="ft-start" value="${t.startDate || ""}" ${!owned ? "disabled" : ""}>
-        </div>
-        <div class="form-group">
-          <label class="lbl">Due Date</label>
-          <input type="date" id="ft-due" value="${t.dueDate || ""}" ${!owned ? "disabled" : ""}>
-        </div>
-        <div class="form-group span2">
-          <label class="lbl">Description</label>
-          <textarea id="ft-desc" placeholder="Context, links, details…" ${!owned ? "disabled" : ""}>${esc(t.description || "")}</textarea>
-        </div>
-      </div>
-      ${!owned ? `<div style="background:rgba(201,96,96,.07);border:1px solid rgba(201,96,96,.2);border-radius:var(--radius);padding:10px 14px;font-size:11px;color:var(--muted);margin-top:8px">🔒 This task belongs to <strong style="color:var(--text)">${esc(t.assignee)}</strong>. You can view and add notes, but cannot edit its fields.</div>` : ""}
-      <div class="form-actions">
-        ${isEdit && owned ? `<button class="btn btn-danger btn-sm" onclick="deleteTask('${taskId}')">Delete</button>` : ""}
-        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-        ${owned ? `<button class="btn btn-primary" onclick="${isEdit ? `saveEdit('${taskId}')` : "saveNew()"}'">${isEdit ? "Save Changes" : "Create Task"}</button>` : ""}
-      </div>`;
+    <div class="form-group span2">
+      <label class="lbl">Task Title</label>
+      <input type="text" id="ft-title" placeholder="What needs to be done?" value="${esc(t.title || "")}" ${!owned ? "disabled" : ""}>
+    </div>
+    <div class="form-group">
+      <label class="lbl">Status</label>
+      <select id="ft-status" ${!owned ? "disabled" : ""}>
+        ${STATUSES.map((s) => `<option value="${s}" ${(t.status || "idea") === s ? "selected" : ""}>${STATUS_LABELS[s]}</option>`).join("")}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="lbl">Priority</label>
+      <select id="ft-priority" ${!owned ? "disabled" : ""}>
+        ${PRIORITIES.map((p) => `<option value="${p}" ${(t.priority || "none") === p ? "selected" : ""}>${p.charAt(0).toUpperCase() + p.slice(1)}</option>`).join("")}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="lbl">Assigned To${isEdit && !owned ? ' <span style="color:var(--muted2)">(locked)</span>' : ""}</label>
+      ${
+        isEdit && !owned
+          ? `<input type="text" value="${esc(t.assignee || "")}" disabled><input type="hidden" id="ft-assignee" value="${esc(t.assignee || "")}">`
+          : `<select id="ft-assignee">${names.map((u) => `<option value="${u}" ${(t.assignee || currentUser?.name) === u ? "selected" : ""}>${u}</option>`).join("")}</select>`
+      }
+    </div>
+    <div class="form-group">
+      <label class="lbl">Start Date</label>
+      <input type="date" id="ft-start" value="${t.startDate || ""}" ${!owned ? "disabled" : ""}>
+    </div>
+    <div class="form-group">
+      <label class="lbl">Due Date</label>
+      <input type="date" id="ft-due" value="${t.dueDate || ""}" ${!owned ? "disabled" : ""}>
+    </div>
+    <div class="form-group span2">
+      <label class="lbl">Description</label>
+      <textarea id="ft-desc" placeholder="Context, links, details…" ${!owned ? "disabled" : ""}>${esc(t.description || "")}</textarea>
+    </div>
+  </div>
+  ${!owned ? `<div style="background:rgba(201,96,96,.07);border:1px solid rgba(201,96,96,.2);border-radius:var(--radius);padding:10px 14px;font-size:11px;color:var(--muted);margin-top:8px">🔒 This task belongs to <strong style="color:var(--text)">${esc(t.assignee)}</strong>. You can view and add notes, but cannot edit its fields.</div>` : ""}
+  <div class="form-actions">
+    ${isEdit && owned ? `<button class="btn btn-danger btn-sm" onclick="deleteTask('${taskId}')">Delete</button>` : ""}
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    ${owned ? `<button class="btn btn-primary" onclick="${isEdit ? `saveEdit('${taskId}')` : "saveNew()"}">${isEdit ? "Save Changes" : "Create Task"}</button>` : ""}
+  </div>`;
       }
 
       async function saveNew() {
@@ -1985,55 +1985,55 @@
         const owned = canEdit(task);
         const taskNotes = task.notes || [];
         return `
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">
-        <span class="badge ${sb2}">${STATUS_LABELS[task.status] || task.status}</span>
-        <span style="font-size:10px;color:var(--muted)">👤 ${esc(task.assignee || "Unassigned")}</span>
-        <span style="font-size:10px;color:var(--muted)">⬆ ${task.priority || "none"}</span>
-        ${
-          owned
-            ? `<button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="editTask('${task.id}')">✎ Edit</button>`
-            : `<span style="margin-left:auto;font-size:10px;color:var(--muted2)">🔒 ${esc(task.assignee)}'s task</span>`
-        }
-      </div>
-      <div style="font-family:var(--font-d);font-size:22px;color:var(--text);margin-bottom:16px;line-height:1.3">${esc(task.title)}</div>
-      <div class="detail-grid" style="margin-bottom:16px">
-        <div class="detail-item"><div class="detail-label">Start Date</div><div class="detail-value">${fmtDate(task.startDate)}</div></div>
-        <div class="detail-item"><div class="detail-label">Due Date</div><div class="detail-value ${ds}">${fmtDate(task.dueDate)}</div></div>
-        <div class="detail-item"><div class="detail-label">Created</div><div class="detail-value">${fmtDate(task.created)}</div></div>
-        ${task.updated ? `<div class="detail-item"><div class="detail-label">Updated</div><div class="detail-value">${fmtDate(task.updated)}</div></div>` : ""}
-      </div>
-      ${task.description ? `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:8px;white-space:pre-wrap">${esc(task.description)}</div>` : ""}
-      <div class="detail-section">
-        <div class="detail-section-title">Progress Notes (${taskNotes.length})</div>
-        <div class="notes-list" id="notes-list-${task.id}">
-          ${
-            taskNotes.length
-              ? taskNotes.slice().reverse().map(noteHTML).join("")
-              : '<div style="color:var(--muted2);font-size:12px;padding:8px 0">No notes yet.</div>'
-          }
-        </div>
-        <div class="note-add-row" style="margin-top:12px">
-          <textarea id="new-note-${task.id}" placeholder="Add a progress note…"></textarea>
-          <button class="btn btn-primary" style="align-self:flex-end" onclick="addNote('${task.id}')">Add</button>
-        </div>
-        <div style="font-size:10px;color:var(--muted2);margin-top:6px">Adding as: <span style="color:var(--gold)">${esc(currentUser?.name)}</span></div>
-      </div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-        ${owned ? `<button class="btn btn-danger btn-sm" onclick="deleteTask('${task.id}')">Delete</button>` : ""}
-        <button class="btn btn-ghost" onclick="closeModal()">Close</button>
-        ${owned ? `<button class="btn btn-primary btn-sm" onclick="cycleStatus('${task.id}')">Change Status</button>` : ""}
-      </div>`;
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+    <span class="badge ${sb2}">${STATUS_LABELS[task.status] || task.status}</span>
+    <span style="font-size:10px;color:var(--muted)">👤 ${esc(task.assignee || "Unassigned")}</span>
+    <span style="font-size:10px;color:var(--muted)">⬆ ${task.priority || "none"}</span>
+    ${
+      owned
+        ? `<button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="editTask('${task.id}')">✎ Edit</button>`
+        : `<span style="margin-left:auto;font-size:10px;color:var(--muted2)">🔒 ${esc(task.assignee)}'s task</span>`
+    }
+  </div>
+  <div style="font-family:var(--font-d);font-size:22px;color:var(--text);margin-bottom:16px;line-height:1.3">${esc(task.title)}</div>
+  <div class="detail-grid" style="margin-bottom:16px">
+    <div class="detail-item"><div class="detail-label">Start Date</div><div class="detail-value">${fmtDate(task.startDate)}</div></div>
+    <div class="detail-item"><div class="detail-label">Due Date</div><div class="detail-value ${ds}">${fmtDate(task.dueDate)}</div></div>
+    <div class="detail-item"><div class="detail-label">Created</div><div class="detail-value">${fmtDate(task.created)}</div></div>
+    ${task.updated ? `<div class="detail-item"><div class="detail-label">Updated</div><div class="detail-value">${fmtDate(task.updated)}</div></div>` : ""}
+  </div>
+  ${task.description ? `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:8px;white-space:pre-wrap">${esc(task.description)}</div>` : ""}
+  <div class="detail-section">
+    <div class="detail-section-title">Progress Notes (${taskNotes.length})</div>
+    <div class="notes-list" id="notes-list-${task.id}">
+      ${
+        taskNotes.length
+          ? taskNotes.slice().reverse().map(noteHTML).join("")
+          : '<div style="color:var(--muted2);font-size:12px;padding:8px 0">No notes yet.</div>'
+      }
+    </div>
+    <div class="note-add-row" style="margin-top:12px">
+      <textarea id="new-note-${task.id}" placeholder="Add a progress note…"></textarea>
+      <button class="btn btn-primary" style="align-self:flex-end" onclick="addNote('${task.id}')">Add</button>
+    </div>
+    <div style="font-size:10px;color:var(--muted2);margin-top:6px">Adding as: <span style="color:var(--gold)">${esc(currentUser?.name)}</span></div>
+  </div>
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+    ${owned ? `<button class="btn btn-danger btn-sm" onclick="deleteTask('${task.id}')">Delete</button>` : ""}
+    <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    ${owned ? `<button class="btn btn-primary btn-sm" onclick="cycleStatus('${task.id}')">Change Status</button>` : ""}
+  </div>`;
       }
 
       function noteHTML(n) {
         return `<div class="note-item">
-        <div class="note-meta">
-          <span style="color:var(--gold)">${esc(n.author)}</span>
-          <span>${timeAgo(n.created_at || n.date)}</span>
-          <span>${new Date(n.created_at || n.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-        </div>
-        <div class="note-body">${esc(n.text)}</div>
-      </div>`;
+    <div class="note-meta">
+      <span style="color:var(--gold)">${esc(n.author)}</span>
+      <span>${timeAgo(n.created_at || n.date)}</span>
+      <span>${new Date(n.created_at || n.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+    </div>
+    <div class="note-body">${esc(n.text)}</div>
+  </div>`;
       }
 
       function editTask(id) {
