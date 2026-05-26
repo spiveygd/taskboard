@@ -1,0 +1,2174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Taskboard</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+      :root {
+        --bg: #0e0e10;
+        --surface: #17171b;
+        --surface2: #1e1e24;
+        --surface3: #26262e;
+        --border: #2c2c36;
+        --border2: #383844;
+        --gold: #c8a96e;
+        --gold-dim: #7a6035;
+        --gold-pale: #3a2e18;
+        --text: #e4e4ec;
+        --muted: #64647a;
+        --muted2: #44445a;
+        --danger: #c96060;
+        --warn: #c99440;
+        --ok: #5ca86e;
+        --idea: #7a8cc4;
+        --prospect: #a07ac9;
+        --font-d: "Playfair Display", Georgia, serif;
+        --font-m: "DM Mono", "Courier New", monospace;
+        --radius: 3px;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-m);
+        font-size: 13px;
+      }
+
+      /* ── Layout ── */
+      .app {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        grid-template-rows: 56px 1fr;
+        min-height: 100vh;
+      }
+      .topbar {
+        grid-column: 1/-1;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 0 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .topbar-brand {
+        font-family: var(--font-d);
+        font-size: 22px;
+        font-weight: 400;
+        color: var(--gold);
+        letter-spacing: -0.01em;
+      }
+      .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .user-pill {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 5px 14px 5px 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .user-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--gold);
+        flex-shrink: 0;
+      }
+      .user-dot.u2 {
+        background: var(--idea);
+      }
+      .clock-small {
+        font-size: 11px;
+        color: var(--muted);
+        letter-spacing: 0.05em;
+      }
+
+      /* ── Sidebar ── */
+      .sidebar {
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        padding: 24px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        overflow-y: auto;
+      }
+      .sidebar-section {
+        font-size: 9px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--muted2);
+        padding: 16px 20px 6px;
+      }
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 20px;
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.03em;
+        transition: all 0.15s;
+        border-left: 2px solid transparent;
+        user-select: none;
+      }
+      .nav-item:hover {
+        color: var(--text);
+        background: var(--surface2);
+      }
+      .nav-item.active {
+        color: var(--gold);
+        border-left-color: var(--gold);
+        background: var(--gold-pale);
+      }
+      .nav-icon {
+        font-size: 14px;
+        width: 18px;
+        text-align: center;
+      }
+      .nav-badge {
+        margin-left: auto;
+        background: var(--danger);
+        color: #fff;
+        font-size: 9px;
+        border-radius: 10px;
+        padding: 1px 6px;
+        min-width: 18px;
+        text-align: center;
+        display: none;
+      }
+      .nav-badge.gold {
+        background: var(--gold);
+        color: var(--bg);
+      }
+
+      /* ── Main ── */
+      .main {
+        overflow-y: auto;
+        padding: 32px;
+      }
+      .page {
+        display: none;
+      }
+      .page.active {
+        display: block;
+        animation: fadeUp 0.2s ease;
+      }
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* ── Page headers ── */
+      .page-header {
+        margin-bottom: 28px;
+      }
+      .page-header h2 {
+        font-family: var(--font-d);
+        font-size: 32px;
+        font-weight: 400;
+        color: var(--text);
+        letter-spacing: -0.02em;
+      }
+      .page-header p {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 4px;
+      }
+      .page-header-row {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      /* ── Cards ── */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px;
+      }
+      .card + .card {
+        margin-top: 12px;
+      }
+
+      /* ── Task cards ── */
+      .task-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px 18px;
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        cursor: pointer;
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+        position: relative;
+        overflow: hidden;
+      }
+      .task-card:hover {
+        border-color: var(--border2);
+        background: var(--surface2);
+      }
+      .task-card + .task-card {
+        margin-top: 8px;
+      }
+      .task-card::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+      }
+      .tc-idea::before {
+        background: var(--idea);
+      }
+      .tc-prospect::before {
+        background: var(--prospect);
+      }
+      .tc-in-progress::before {
+        background: var(--warn);
+      }
+      .tc-completed::before {
+        background: var(--ok);
+      }
+      .tc-blocked::before {
+        background: var(--danger);
+      }
+      .tc-on-hold::before {
+        background: var(--muted);
+      }
+      .task-main {
+        flex: 1;
+        min-width: 0;
+      }
+      .task-title {
+        font-family: var(--font-d);
+        font-size: 16px;
+        font-weight: 400;
+        color: var(--text);
+        margin-bottom: 5px;
+        line-height: 1.3;
+      }
+      .task-title.done {
+        text-decoration: line-through;
+        color: var(--muted);
+      }
+      .task-sub {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+      .task-meta-chip {
+        font-size: 10px;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      /* ── Badges ── */
+      .badge {
+        font-size: 9px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        padding: 3px 8px;
+        border-radius: 2px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .b-idea {
+        background: rgba(122, 140, 196, 0.15);
+        color: var(--idea);
+      }
+      .b-prospect {
+        background: rgba(160, 122, 201, 0.15);
+        color: var(--prospect);
+      }
+      .b-in-progress {
+        background: rgba(201, 148, 64, 0.15);
+        color: var(--warn);
+      }
+      .b-completed {
+        background: rgba(92, 168, 110, 0.15);
+        color: var(--ok);
+      }
+      .b-blocked {
+        background: rgba(201, 96, 96, 0.15);
+        color: var(--danger);
+      }
+      .b-on-hold {
+        background: rgba(100, 100, 122, 0.15);
+        color: var(--muted);
+      }
+
+      /* ── Priority dots ── */
+      .pri-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-top: 5px;
+      }
+      .p-high {
+        background: var(--danger);
+      }
+      .p-medium {
+        background: var(--warn);
+      }
+      .p-low {
+        background: var(--ok);
+      }
+      .p-none {
+        background: var(--muted2);
+      }
+
+      /* ── Date colors ── */
+      .date-overdue {
+        color: var(--danger) !important;
+      }
+      .date-soon {
+        color: var(--warn) !important;
+      }
+      .date-ok {
+        color: var(--ok) !important;
+      }
+
+      /* ── Toolbar / filters ── */
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+        align-items: center;
+      }
+      .filter-btn {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 5px 14px;
+        font-size: 11px;
+        font-family: var(--font-m);
+        color: var(--muted);
+        cursor: pointer;
+        transition: all 0.15s;
+        letter-spacing: 0.03em;
+      }
+      .filter-btn:hover {
+        border-color: var(--border2);
+        color: var(--text);
+      }
+      .filter-btn.active {
+        background: var(--gold-pale);
+        border-color: var(--gold-dim);
+        color: var(--gold);
+      }
+      .search-box {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 7px 12px;
+        font-family: var(--font-m);
+        font-size: 12px;
+        color: var(--text);
+        outline: none;
+        width: 220px;
+        transition: border-color 0.15s;
+      }
+      .search-box:focus {
+        border-color: var(--gold-dim);
+      }
+      .search-box::placeholder {
+        color: var(--muted2);
+      }
+      .toolbar-right {
+        margin-left: auto;
+      }
+
+      /* ── Stats ── */
+      .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px;
+        margin-bottom: 28px;
+      }
+      .stat-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px;
+        text-align: center;
+      }
+      .stat-number {
+        font-family: var(--font-d);
+        font-size: 28px;
+        font-weight: 400;
+        color: var(--gold);
+        line-height: 1;
+      }
+      .stat-label {
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+
+      /* ── Empty ── */
+      .empty {
+        text-align: center;
+        padding: 60px 24px;
+        color: var(--muted);
+      }
+      .empty-icon {
+        font-size: 40px;
+        display: block;
+        margin-bottom: 12px;
+        opacity: 0.3;
+      }
+      .empty p {
+        font-size: 12px;
+        line-height: 1.7;
+      }
+
+      /* ── Buttons ── */
+      .btn {
+        font-family: var(--font-m);
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        border: none;
+        border-radius: var(--radius);
+        cursor: pointer;
+        padding: 9px 18px;
+        transition: all 0.15s;
+        white-space: nowrap;
+      }
+      .btn-primary {
+        background: var(--gold);
+        color: var(--bg);
+        font-weight: 500;
+      }
+      .btn-primary:hover {
+        background: #dfc07e;
+      }
+      .btn-ghost {
+        background: transparent;
+        color: var(--muted);
+        border: 1px solid var(--border);
+      }
+      .btn-ghost:hover {
+        border-color: var(--border2);
+        color: var(--text);
+      }
+      .btn-danger {
+        background: rgba(201, 96, 96, 0.12);
+        color: var(--danger);
+        border: 1px solid rgba(201, 96, 96, 0.25);
+      }
+      .btn-danger:hover {
+        background: rgba(201, 96, 96, 0.25);
+      }
+      .btn-sm {
+        padding: 5px 12px;
+        font-size: 10px;
+      }
+
+      /* ── Google sign-in button ── */
+      .btn-google {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        background: #fff;
+        color: #3c4043;
+        border: 1px solid #dadce0;
+        border-radius: 4px;
+        padding: 11px 20px;
+        font-family: "DM Mono", sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        width: 100%;
+        transition:
+          background 0.15s,
+          box-shadow 0.15s;
+        letter-spacing: 0.01em;
+        text-transform: none;
+      }
+      .btn-google:hover {
+        background: #f8f8f8;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+      }
+      .btn-google svg {
+        flex-shrink: 0;
+      }
+
+      /* ── Modal ── */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 10, 14, 0.85);
+        z-index: 100;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 40px 20px;
+        overflow-y: auto;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+      }
+      .modal-overlay.open {
+        opacity: 1;
+        pointer-events: all;
+      }
+      .modal {
+        background: var(--surface);
+        border: 1px solid var(--border2);
+        border-radius: var(--radius);
+        width: 100%;
+        max-width: 660px;
+        padding: 28px;
+        position: relative;
+        transform: translateY(16px);
+        transition: transform 0.2s;
+      }
+      .modal-overlay.open .modal {
+        transform: translateY(0);
+      }
+      .modal-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 24px;
+        gap: 12px;
+      }
+      .modal-title {
+        font-family: var(--font-d);
+        font-size: 22px;
+        font-weight: 400;
+        color: var(--text);
+        line-height: 1.2;
+      }
+      .modal-close {
+        background: none;
+        border: none;
+        color: var(--muted);
+        font-size: 20px;
+        cursor: pointer;
+        padding: 0 4px;
+        line-height: 1;
+        transition: color 0.15s;
+        flex-shrink: 0;
+      }
+      .modal-close:hover {
+        color: var(--text);
+      }
+
+      /* ── Forms ── */
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .form-group.span2 {
+        grid-column: 1/-1;
+      }
+      label.lbl {
+        font-size: 10px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      input[type="text"],
+      input[type="date"],
+      select,
+      textarea {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--text);
+        font-family: var(--font-m);
+        font-size: 13px;
+        padding: 9px 12px;
+        outline: none;
+        transition: border-color 0.15s;
+        width: 100%;
+        color-scheme: dark;
+      }
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: var(--gold-dim);
+      }
+      input:disabled,
+      select:disabled,
+      textarea:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      select option {
+        background: var(--surface2);
+      }
+      textarea {
+        resize: vertical;
+        min-height: 80px;
+        line-height: 1.6;
+      }
+      .form-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+      }
+
+      /* ── Notes ── */
+      .notes-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 14px;
+      }
+      .note-item {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px 14px;
+      }
+      .note-meta {
+        font-size: 10px;
+        color: var(--muted);
+        margin-bottom: 5px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .note-body {
+        font-size: 13px;
+        color: var(--text);
+        line-height: 1.6;
+        white-space: pre-wrap;
+      }
+      .note-add-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .note-add-row textarea {
+        flex: 1;
+        min-height: 60px;
+      }
+
+      /* ── Detail ── */
+      .detail-section {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+      }
+      .detail-section-title {
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 12px;
+      }
+      .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .detail-label {
+        font-size: 9px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--muted2);
+      }
+      .detail-value {
+        font-size: 13px;
+        color: var(--text);
+      }
+
+      /* ── User tabs ── */
+      .user-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 24px;
+      }
+      .user-tab {
+        padding: 10px 20px;
+        font-size: 12px;
+        font-family: var(--font-m);
+        cursor: pointer;
+        color: var(--muted);
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        transition: all 0.15s;
+        letter-spacing: 0.03em;
+      }
+      .user-tab:hover {
+        color: var(--text);
+      }
+      .user-tab.active {
+        color: var(--gold);
+        border-bottom-color: var(--gold);
+      }
+
+      /* ── Kanban ── */
+      .kanban {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 14px;
+        align-items: start;
+      }
+      .kanban-col {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 14px;
+      }
+      .kanban-col-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .kanban-col-title {
+        font-size: 10px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .kanban-count {
+        font-size: 10px;
+        background: var(--surface3);
+        border-radius: 10px;
+        padding: 1px 7px;
+        color: var(--muted);
+      }
+      .kanban-task {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 10px 12px;
+        cursor: pointer;
+        transition: border-color 0.15s;
+        margin-bottom: 6px;
+      }
+      .kanban-task:hover {
+        border-color: var(--border2);
+      }
+      .kanban-task-title {
+        font-size: 13px;
+        color: var(--text);
+        line-height: 1.35;
+        margin-bottom: 6px;
+      }
+      .kanban-task-foot {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      /* ── Overdue bar ── */
+      .overdue-bar {
+        background: rgba(201, 96, 96, 0.1);
+        border: 1px solid rgba(201, 96, 96, 0.3);
+        border-radius: var(--radius);
+        padding: 10px 16px;
+        margin-bottom: 20px;
+        font-size: 12px;
+        color: var(--danger);
+        display: none;
+      }
+      .overdue-bar.show {
+        display: block;
+      }
+
+      /* ── Sync ── */
+      @keyframes pulse-dot {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+      #sync-indicator {
+        display: none;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      #sync-indicator span {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--gold);
+        animation: pulse-dot 1s ease infinite;
+      }
+
+      /* ── Login screen ── */
+      @keyframes login-in {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      #login-screen {
+        position: fixed;
+        inset: 0;
+        background: var(--bg);
+        z-index: 200;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-image:
+          linear-gradient(rgba(200, 169, 110, 0.025) 1px, transparent 1px),
+          linear-gradient(
+            90deg,
+            rgba(200, 169, 110, 0.025) 1px,
+            transparent 1px
+          );
+        background-size: 40px 40px;
+      }
+      .login-box {
+        background: var(--surface);
+        border: 1px solid var(--border2);
+        border-radius: var(--radius);
+        padding: 44px;
+        width: 100%;
+        max-width: 400px;
+        animation: login-in 0.35s ease;
+      }
+      .login-brand {
+        font-family: var(--font-d);
+        font-size: 36px;
+        font-weight: 400;
+        color: var(--gold);
+        margin-bottom: 4px;
+        letter-spacing: -0.02em;
+      }
+      .login-sub {
+        font-size: 11px;
+        color: var(--muted);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-bottom: 36px;
+      }
+      .login-divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 20px 0;
+        color: var(--muted2);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+      }
+      .login-divider::before,
+      .login-divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+      }
+      .login-error {
+        background: rgba(201, 96, 96, 0.1);
+        border: 1px solid rgba(201, 96, 96, 0.3);
+        border-radius: var(--radius);
+        padding: 10px 14px;
+        font-size: 12px;
+        color: var(--danger);
+        margin-bottom: 16px;
+        display: none;
+      }
+      .login-error.show {
+        display: block;
+      }
+      .login-note {
+        font-size: 10px;
+        color: var(--muted2);
+        text-align: center;
+        margin-top: 16px;
+        line-height: 1.7;
+      }
+      .login-note a {
+        color: var(--muted);
+        text-decoration: underline;
+        cursor: pointer;
+      }
+
+      /* ── Scrollbar ── */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border2);
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--muted2);
+      }
+
+      /* ── Responsive ── */
+      @media (max-width: 640px) {
+        .app {
+          grid-template-columns: 1fr;
+          grid-template-rows: 56px auto 1fr;
+        }
+        .sidebar {
+          flex-direction: row;
+          overflow-x: auto;
+          padding: 8px 0;
+          border-right: none;
+          border-bottom: 1px solid var(--border);
+        }
+        .sidebar-section {
+          display: none;
+        }
+        .nav-item {
+          flex-direction: column;
+          gap: 3px;
+          font-size: 10px;
+          padding: 6px 14px;
+          border-left: none;
+          border-bottom: 2px solid transparent;
+        }
+        .nav-item.active {
+          border-bottom-color: var(--gold);
+          border-left-color: transparent;
+          background: transparent;
+        }
+        .main {
+          padding: 16px;
+        }
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+        .detail-grid {
+          grid-template-columns: 1fr;
+        }
+        .kanban {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── App Shell ── -->
+    <div class="app" id="app">
+      <header class="topbar">
+        <div class="topbar-brand">Taskboard</div>
+        <div class="topbar-right">
+          <span id="sync-status" style="font-size: 11px; display: none"></span>
+          <div id="sync-indicator"><span></span>Syncing…</div>
+          <div class="clock-small" id="topClock"></div>
+          <div class="user-pill">
+            <div class="user-dot" id="userDot"></div>
+            <span id="userLabel">—</span>
+          </div>
+          <button
+            class="btn btn-ghost btn-sm"
+            onclick="refreshData()"
+            style="
+              padding: 5px 10px;
+              font-size: 16px;
+              border: none;
+              color: var(--muted);
+            "
+            title="Refresh"
+          >
+            ↻
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="signOut()">
+            Sign Out
+          </button>
+        </div>
+      </header>
+
+      <nav class="sidebar">
+        <div class="sidebar-section">Workspace</div>
+        <div
+          class="nav-item active"
+          data-page="dashboard"
+          onclick="nav('dashboard')"
+        >
+          <span class="nav-icon">◈</span> Dashboard
+        </div>
+        <div class="nav-item" data-page="my-tasks" onclick="nav('my-tasks')">
+          <span class="nav-icon">◉</span> My Tasks<span
+            class="nav-badge gold"
+            id="badge-my"
+          ></span>
+        </div>
+        <div class="nav-item" data-page="team" onclick="nav('team')">
+          <span class="nav-icon">◎</span> Team View
+        </div>
+        <div class="nav-item" data-page="all-tasks" onclick="nav('all-tasks')">
+          <span class="nav-icon">≡</span> All Tasks<span
+            class="nav-badge"
+            id="badge-overdue"
+          ></span>
+        </div>
+        <div class="nav-item" data-page="board" onclick="nav('board')">
+          <span class="nav-icon">⊞</span> Board
+        </div>
+        <div class="sidebar-section">Actions</div>
+        <div class="nav-item" onclick="openNewTask()">
+          <span class="nav-icon">＋</span> New Task
+        </div>
+      </nav>
+
+      <main class="main">
+        <section class="page active" id="page-dashboard">
+          <div class="page-header">
+            <h2 id="dash-greeting">Good morning.</h2>
+            <p id="dash-sub">Loading your tasks…</p>
+          </div>
+          <div class="stats-row" id="dash-stats"></div>
+          <div class="overdue-bar" id="dash-overdue-bar"></div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px">
+            <div>
+              <div
+                style="
+                  font-size: 10px;
+                  letter-spacing: 0.2em;
+                  text-transform: uppercase;
+                  color: var(--muted);
+                  margin-bottom: 12px;
+                "
+              >
+                My Open Tasks
+              </div>
+              <div id="dash-mine"></div>
+            </div>
+            <div>
+              <div
+                style="
+                  font-size: 10px;
+                  letter-spacing: 0.2em;
+                  text-transform: uppercase;
+                  color: var(--muted);
+                  margin-bottom: 12px;
+                "
+              >
+                Recent Activity
+              </div>
+              <div id="dash-recent"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="page-my-tasks">
+          <div class="page-header page-header-row">
+            <div>
+              <h2>My Tasks</h2>
+              <p>Tasks assigned to you</p>
+            </div>
+            <button class="btn btn-primary" onclick="openNewTask()">
+              + New Task
+            </button>
+          </div>
+          <div class="toolbar">
+            <button
+              class="filter-btn active"
+              onclick="setFilter('my', 'all', this)"
+            >
+              All
+            </button>
+            <button class="filter-btn" onclick="setFilter('my', 'idea', this)">
+              Idea
+            </button>
+            <button
+              class="filter-btn"
+              onclick="setFilter('my', 'prospect', this)"
+            >
+              Prospect
+            </button>
+            <button
+              class="filter-btn"
+              onclick="setFilter('my', 'in-progress', this)"
+            >
+              In Progress
+            </button>
+            <button
+              class="filter-btn"
+              onclick="setFilter('my', 'blocked', this)"
+            >
+              Blocked
+            </button>
+            <button
+              class="filter-btn"
+              onclick="setFilter('my', 'completed', this)"
+            >
+              Completed
+            </button>
+            <div class="toolbar-right">
+              <input
+                class="search-box"
+                placeholder="Search…"
+                oninput="setSearch('my', this.value)"
+              />
+            </div>
+          </div>
+          <div id="my-tasks-list"></div>
+        </section>
+
+        <section class="page" id="page-team">
+          <div class="page-header page-header-row">
+            <div>
+              <h2>Team View</h2>
+              <p>See what everyone is working on</p>
+            </div>
+            <button class="btn btn-primary" onclick="openNewTask()">
+              + New Task
+            </button>
+          </div>
+          <div class="user-tabs" id="team-tabs"></div>
+          <div id="team-tasks-list"></div>
+        </section>
+
+        <section class="page" id="page-all-tasks">
+          <div class="page-header page-header-row">
+            <div>
+              <h2>All Tasks</h2>
+              <p>Every task across the board</p>
+            </div>
+            <button class="btn btn-primary" onclick="openNewTask()">
+              + New Task
+            </button>
+          </div>
+          <div class="toolbar">
+            <button
+              class="filter-btn active"
+              onclick="setFilter('all', 'all', this)"
+            >
+              All
+            </button>
+            <button class="filter-btn" onclick="setFilter('all', 'idea', this)">
+              Idea
+            </button>
+            <button
+              class="filter-btn"
+              onclick="setFilter('all', 'prospect', this)"
+            >
+              Prospect
+            </button>
+            <button
+              class="filter-btn"
+              onclick="setFilter('all', 'in-progress', this)"
+            >
+              In Progress
+            </button>
+            <button
+              class="filter-btn"
+              onclick="setFilter('all', 'blocked', this)"
+            >
+              Blocked
+            </button>
+            <button
+              class="filter-btn"
+              onclick="setFilter('all', 'on-hold', this)"
+            >
+              On Hold
+            </button>
+            <button
+              class="filter-btn"
+              onclick="setFilter('all', 'completed', this)"
+            >
+              Completed
+            </button>
+            <div class="toolbar-right">
+              <input
+                class="search-box"
+                placeholder="Search all tasks…"
+                oninput="setSearch('all', this.value)"
+              />
+            </div>
+          </div>
+          <div id="all-tasks-list"></div>
+        </section>
+
+        <section class="page" id="page-board">
+          <div class="page-header page-header-row">
+            <div>
+              <h2>Board</h2>
+              <p>Status overview</p>
+            </div>
+            <button class="btn btn-primary" onclick="openNewTask()">
+              + New Task
+            </button>
+          </div>
+          <div class="kanban" id="kanban-board"></div>
+        </section>
+      </main>
+    </div>
+
+    <!-- ── Task Modal ── -->
+    <div class="modal-overlay" id="taskModal" onclick="maybeCloseModal(event)">
+      <div class="modal">
+        <div class="modal-header">
+          <div class="modal-title" id="modal-title">New Task</div>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+
+    <!-- ── Login Screen ── -->
+    <div id="login-screen">
+      <div class="login-box">
+        <div class="login-brand">Taskboard</div>
+        <div class="login-sub">Sign in to continue</div>
+        <div class="login-error" id="login-error"></div>
+        <button class="btn-google" onclick="signInWithGoogle()">
+          <svg width="18" height="18" viewBox="0 0 18 18">
+            <path
+              fill="#4285F4"
+              d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"
+            />
+            <path
+              fill="#34A853"
+              d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"
+            />
+            <path
+              fill="#EA4335"
+              d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.3z"
+            />
+          </svg>
+          Sign in with Google
+        </button>
+        <div class="login-note">
+          Only authorised accounts can access this workspace.<br />
+          Sign in with your Google account to continue.
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ═══════════════════════════════════════════════
+      // CONFIG
+      // ═══════════════════════════════════════════════
+      const SUPABASE_URL = "https://ghezyevakahzeushpqdb.supabase.co";
+      const SUPABASE_KEY =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoZXp5ZXZha2FoemV1c2hwcWRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3NDcxNjYsImV4cCI6MjA5NTMyMzE2Nn0.lnzewh9bdmpnFMdq776CzpfUJJ0O4Y1IuJinxkiNmqg";
+
+      // Authorised email → display name mapping
+      // Only these two emails can log in
+      const ALLOWED_USERS = {
+        "spiveygd@gmail.com": "Gary",
+        "calvinnelms1@gmail.com": "Calvin",
+      };
+
+      const STATUSES = [
+        "idea",
+        "prospect",
+        "in-progress",
+        "on-hold",
+        "blocked",
+        "completed",
+      ];
+      const PRIORITIES = ["high", "medium", "low", "none"];
+      const STATUS_LABELS = {
+        idea: "Idea",
+        prospect: "Prospect",
+        "in-progress": "In Progress",
+        "on-hold": "On Hold",
+        blocked: "Blocked",
+        completed: "Completed",
+      };
+      const STATUS_BADGE = {
+        idea: "b-idea",
+        prospect: "b-prospect",
+        "in-progress": "b-in-progress",
+        "on-hold": "b-on-hold",
+        blocked: "b-blocked",
+        completed: "b-completed",
+      };
+      const STATUS_CARD = {
+        idea: "tc-idea",
+        prospect: "tc-prospect",
+        "in-progress": "tc-in-progress",
+        "on-hold": "tc-on-hold",
+        blocked: "tc-blocked",
+        completed: "tc-completed",
+      };
+
+      // ═══════════════════════════════════════════════
+      // SUPABASE CLIENT
+      // ═══════════════════════════════════════════════
+      const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+      // ═══════════════════════════════════════════════
+      // STATE
+      // ═══════════════════════════════════════════════
+      let currentUser = null; // { id, email, name }
+      let tasks = [];
+      let notes = [];
+      let filters = { my: "all", all: "all" };
+      let searches = { my: "", all: "" };
+      let teamViewUser = null;
+      let currentPage = "dashboard";
+
+      // ═══════════════════════════════════════════════
+      // AUTH
+      // ═══════════════════════════════════════════════
+      async function signInWithGoogle() {
+        const errEl = document.getElementById("login-error");
+        errEl.classList.remove("show");
+        const { error } = await sb.auth.signInWithOAuth({
+          provider: "google",
+          options: { redirectTo: window.location.href },
+        });
+        if (error) {
+          errEl.textContent = error.message;
+          errEl.classList.add("show");
+        }
+      }
+
+      async function signOut() {
+        await sb.auth.signOut();
+        currentUser = null;
+        tasks = [];
+        notes = [];
+        document.getElementById("login-screen").style.display = "flex";
+      }
+
+      async function initAuth() {
+        // Handle OAuth redirect
+        const {
+          data: { session },
+        } = await sb.auth.getSession();
+        if (session) await handleSession(session);
+
+        // Listen for auth changes
+        sb.auth.onAuthStateChange(async (_event, session) => {
+          if (session) await handleSession(session);
+          else {
+            currentUser = null;
+            document.getElementById("login-screen").style.display = "flex";
+          }
+        });
+      }
+
+      async function handleSession(session) {
+        const email = session.user.email;
+
+        // Check if email is in allowed list
+        // If ALLOWED_USERS is empty (not configured yet), allow any Google login
+        const configured = Object.keys(ALLOWED_USERS).length > 0;
+        if (configured && !ALLOWED_USERS[email]) {
+          const errEl = document.getElementById("login-error");
+          errEl.textContent = `${email} is not authorised to access this workspace.`;
+          errEl.classList.add("show");
+          await sb.auth.signOut();
+          return;
+        }
+
+        const name = configured
+          ? ALLOWED_USERS[email]
+          : session.user.user_metadata?.full_name?.split(" ")[0] ||
+            email.split("@")[0];
+        currentUser = { id: session.user.id, email, name };
+        teamViewUser = teamViewUser || name;
+
+        document.getElementById("login-screen").style.display = "none";
+        applyUser();
+        await refreshData();
+        setInterval(refreshData, 60000);
+      }
+
+      function applyUser() {
+        const names = Object.values(ALLOWED_USERS);
+        const idx = names.indexOf(currentUser.name);
+        document.getElementById("userLabel").textContent = currentUser.name;
+        document.getElementById("userDot").className =
+          "user-dot" + (idx > 0 ? " u2" : "");
+      }
+
+      // ═══════════════════════════════════════════════
+      // DATA
+      // ═══════════════════════════════════════════════
+      function genId() {
+        return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      }
+
+      async function refreshData() {
+        setSyncing(true);
+        try {
+          const [{ data: t, error: te }, { data: n, error: ne }] =
+            await Promise.all([
+              sb
+                .from("tasks")
+                .select("*")
+                .order("created_at", { ascending: false }),
+              sb
+                .from("notes")
+                .select("*")
+                .order("created_at", { ascending: true }),
+            ]);
+          if (te) throw te;
+          if (ne) throw ne;
+          tasks = (t || []).map((row) => ({
+            id: row.id,
+            title: row.title,
+            status: row.status,
+            priority: row.priority,
+            assignee: row.assignee,
+            startDate: row.start_date,
+            dueDate: row.due_date,
+            description: row.description,
+            created: row.created_at,
+            updated: row.updated_at,
+            notes: (n || []).filter((note) => note.task_id === row.id),
+          }));
+          notes = n || [];
+          setSyncing(false);
+          showSyncOk();
+          renderPage(currentPage);
+          updateBadges();
+        } catch (e) {
+          setSyncing(false);
+          showSyncError("Sync failed: " + (e.message || e));
+        }
+      }
+
+      async function dbCreateTask(task) {
+        const { error } = await sb.from("tasks").insert({
+          id: task.id,
+          title: task.title,
+          status: task.status,
+          priority: task.priority,
+          assignee: task.assignee,
+          start_date: task.startDate || null,
+          due_date: task.dueDate || null,
+          description: task.description || null,
+        });
+        if (error) throw error;
+      }
+
+      async function dbUpdateTask(task) {
+        const { error } = await sb
+          .from("tasks")
+          .update({
+            title: task.title,
+            status: task.status,
+            priority: task.priority,
+            assignee: task.assignee,
+            start_date: task.startDate || null,
+            due_date: task.dueDate || null,
+            description: task.description || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", task.id);
+        if (error) throw error;
+      }
+
+      async function dbDeleteTask(id) {
+        const { error } = await sb.from("tasks").delete().eq("id", id);
+        if (error) throw error;
+      }
+
+      async function dbAddNote(note) {
+        const { error } = await sb.from("notes").insert({
+          id: note.id,
+          task_id: note.taskId,
+          author: note.author,
+          text: note.text,
+        });
+        if (error) throw error;
+      }
+
+      // ═══════════════════════════════════════════════
+      // PERMISSIONS
+      // ═══════════════════════════════════════════════
+      function canEdit(task) {
+        return task.assignee === currentUser?.name;
+      }
+
+      // ═══════════════════════════════════════════════
+      // CLOCK
+      // ═══════════════════════════════════════════════
+      function tickClock() {
+        const now = new Date();
+        document.getElementById("topClock").textContent =
+          now.toLocaleDateString("en-US", {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+          }) +
+          " · " +
+          now.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+      }
+      tickClock();
+      setInterval(tickClock, 30000);
+
+      // ═══════════════════════════════════════════════
+      // SYNC UI
+      // ═══════════════════════════════════════════════
+      function setSyncing(on) {
+        document.getElementById("sync-indicator").style.display = on
+          ? "flex"
+          : "none";
+      }
+      function showSyncOk() {
+        const el = document.getElementById("sync-status");
+        el.textContent = "✓ Synced";
+        el.style.color = "var(--ok)";
+        el.style.display = "";
+        setTimeout(() => {
+          el.style.display = "none";
+        }, 2000);
+      }
+      function showSyncError(msg) {
+        const el = document.getElementById("sync-status");
+        el.textContent = "⚠ " + msg;
+        el.style.color = "var(--danger)";
+        el.style.display = "";
+      }
+
+      // ═══════════════════════════════════════════════
+      // NAVIGATION
+      // ═══════════════════════════════════════════════
+      function nav(page) {
+        document
+          .querySelectorAll(".page")
+          .forEach((p) => p.classList.remove("active"));
+        document
+          .querySelectorAll(".nav-item")
+          .forEach((n) => n.classList.remove("active"));
+        document.getElementById("page-" + page).classList.add("active");
+        document
+          .querySelector(`[data-page="${page}"]`)
+          ?.classList.add("active");
+        currentPage = page;
+        renderPage(page);
+      }
+      function renderPage(p) {
+        if (p === "dashboard") renderDashboard();
+        else if (p === "my-tasks") renderMyTasks();
+        else if (p === "team") renderTeam();
+        else if (p === "all-tasks") renderAllTasks();
+        else if (p === "board") renderBoard();
+      }
+
+      // ═══════════════════════════════════════════════
+      // HELPERS
+      // ═══════════════════════════════════════════════
+      function esc(s) {
+        return (s || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+      function fmtDate(ds) {
+        if (!ds) return "—";
+        const d = new Date(ds.includes("T") ? ds : ds + "T12:00:00");
+        return d.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      }
+      function dateStatus(ds) {
+        if (!ds) return "";
+        const diff =
+          new Date(ds.includes("T") ? ds : ds + "T23:59:59") - Date.now();
+        if (diff < 0) return "date-overdue";
+        if (diff < 86400000 * 2) return "date-soon";
+        return "date-ok";
+      }
+      function timeAgo(iso) {
+        const diff = Date.now() - new Date(iso).getTime();
+        if (diff < 60000) return "just now";
+        if (diff < 3600000) return Math.floor(diff / 60000) + "m ago";
+        if (diff < 86400000) return Math.floor(diff / 3600000) + "h ago";
+        return Math.floor(diff / 86400000) + "d ago";
+      }
+      function overdueCount() {
+        return tasks.filter(
+          (t) =>
+            t.status !== "completed" &&
+            t.dueDate &&
+            new Date(t.dueDate + "T23:59:59") < Date.now(),
+        ).length;
+      }
+      function updateBadges() {
+        const mine = tasks.filter(
+          (t) => t.assignee === currentUser?.name && t.status !== "completed",
+        ).length;
+        const over = overdueCount();
+        const mb = document.getElementById("badge-my");
+        mb.style.display = mine > 0 ? "" : "none";
+        mb.textContent = mine;
+        const ob = document.getElementById("badge-overdue");
+        ob.style.display = over > 0 ? "" : "none";
+        ob.textContent = over;
+      }
+      function emptyState(msg) {
+        return `<div class="empty"><span class="empty-icon">◌</span><p>${msg}</p></div>`;
+      }
+      function sortTasks(arr) {
+        return [...arr].sort((a, b) => {
+          if (a.status === "completed" && b.status !== "completed") return 1;
+          if (a.status !== "completed" && b.status === "completed") return -1;
+          const p = { high: 0, medium: 1, low: 2, none: 3 };
+          if (p[a.priority] !== p[b.priority])
+            return p[a.priority] - p[b.priority];
+          if (a.dueDate && b.dueDate)
+            return new Date(a.dueDate) - new Date(b.dueDate);
+          if (a.dueDate) return -1;
+          if (b.dueDate) return 1;
+          return 0;
+        });
+      }
+
+      // ═══════════════════════════════════════════════
+      // TASK CARD HTML
+      // ═══════════════════════════════════════════════
+      function taskCardHTML(task) {
+        const sc = STATUS_CARD[task.status] || "";
+        const sb2 = STATUS_BADGE[task.status] || "";
+        const ds = dateStatus(task.dueDate);
+        const nc = (task.notes || []).length;
+        return `<div class="task-card ${sc}" onclick="openTask('${task.id}')">
+        <div class="pri-dot p-${task.priority || "none"}"></div>
+        <div class="task-main">
+          <div class="task-title ${task.status === "completed" ? "done" : ""}">${esc(task.title)}</div>
+          <div class="task-sub">
+            <span class="badge ${sb2}">${STATUS_LABELS[task.status] || task.status}</span>
+            <span class="task-meta-chip">👤 ${esc(task.assignee || "Unassigned")}</span>
+            ${task.dueDate ? `<span class="task-meta-chip ${ds}">📅 Due ${fmtDate(task.dueDate)}</span>` : ""}
+            ${nc ? `<span class="task-meta-chip">💬 ${nc}</span>` : ""}
+          </div>
+        </div>
+      </div>`;
+      }
+
+      // ═══════════════════════════════════════════════
+      // DASHBOARD
+      // ═══════════════════════════════════════════════
+      function renderDashboard() {
+        updateBadges();
+        const hour = new Date().getHours();
+        const greet =
+          hour < 12
+            ? "Good morning"
+            : hour < 17
+              ? "Good afternoon"
+              : "Good evening";
+        document.getElementById("dash-greeting").textContent =
+          `${greet}, ${currentUser?.name || ""}.`;
+        const mine = tasks.filter((t) => t.assignee === currentUser?.name);
+        const open = mine.filter((t) => t.status !== "completed");
+        const inProg = tasks.filter((t) => t.status === "in-progress").length;
+        const over = overdueCount();
+        document.getElementById("dash-sub").textContent =
+          `${tasks.length} total tasks · ${inProg} in progress${over ? " · " + over + " overdue" : ""}`;
+        document.getElementById("dash-stats").innerHTML = `
+        <div class="stat-card"><div class="stat-number">${tasks.length}</div><div class="stat-label">Total</div></div>
+        <div class="stat-card"><div class="stat-number" style="color:var(--warn)">${inProg}</div><div class="stat-label">In Progress</div></div>
+        <div class="stat-card"><div class="stat-number" style="color:var(--gold)">${open.length}</div><div class="stat-label">My Open</div></div>
+        <div class="stat-card"><div class="stat-number" style="color:${over ? "var(--danger)" : "var(--ok)"}">${over}</div><div class="stat-label">Overdue</div></div>`;
+        const bar = document.getElementById("dash-overdue-bar");
+        if (over > 0) {
+          bar.className = "overdue-bar show";
+          bar.textContent = `⚠ ${over} task${over > 1 ? "s are" : " is"} past due`;
+        } else bar.className = "overdue-bar";
+        document.getElementById("dash-mine").innerHTML = open.length
+          ? sortTasks(open).slice(0, 5).map(taskCardHTML).join("")
+          : emptyState("No open tasks for you — nice!");
+        const allNotes = [];
+        tasks.forEach((t) =>
+          (t.notes || []).forEach((n) =>
+            allNotes.push({ ...n, taskTitle: t.title, taskId: t.id }),
+          ),
+        );
+        allNotes.sort(
+          (a, b) =>
+            new Date(b.created_at || b.date) - new Date(a.created_at || a.date),
+        );
+        document.getElementById("dash-recent").innerHTML = allNotes.length
+          ? '<div style="display:flex;flex-direction:column;gap:8px">' +
+            allNotes
+              .slice(0, 6)
+              .map(
+                (n) => `
+          <div class="card" style="padding:12px;cursor:pointer" onclick="openTask('${n.taskId || n.task_id}')">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${esc(n.author)} · ${timeAgo(n.created_at || n.date)} · <span style="color:var(--gold)">${esc(n.taskTitle)}</span></div>
+            <div style="font-size:12px;color:var(--text);line-height:1.5">${esc((n.text || "").slice(0, 120))}${(n.text || "").length > 120 ? "…" : ""}</div>
+          </div>`,
+              )
+              .join("") +
+            "</div>"
+          : emptyState("No notes yet. Add notes as you make progress.");
+      }
+
+      // ═══════════════════════════════════════════════
+      // MY TASKS
+      // ═══════════════════════════════════════════════
+      function setFilter(scope, f, btn) {
+        filters[scope] = f;
+        const parent = btn.closest(".toolbar");
+        parent
+          .querySelectorAll(".filter-btn")
+          .forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        if (scope === "my") renderMyTasks();
+        else renderAllTasks();
+      }
+      function setSearch(scope, v) {
+        searches[scope] = v;
+        if (scope === "my") renderMyTasks();
+        else renderAllTasks();
+      }
+      function renderMyTasks() {
+        updateBadges();
+        let t = tasks.filter((x) => x.assignee === currentUser?.name);
+        if (filters.my !== "all") t = t.filter((x) => x.status === filters.my);
+        if (searches.my)
+          t = t.filter((x) =>
+            x.title.toLowerCase().includes(searches.my.toLowerCase()),
+          );
+        document.getElementById("my-tasks-list").innerHTML =
+          sortTasks(t).map(taskCardHTML).join("") ||
+          emptyState("No tasks match this filter.");
+      }
+
+      // ═══════════════════════════════════════════════
+      // TEAM VIEW
+      // ═══════════════════════════════════════════════
+      function renderTeam() {
+        updateBadges();
+        const names =
+          Object.values(ALLOWED_USERS).length > 0
+            ? Object.values(ALLOWED_USERS)
+            : [...new Set(tasks.map((t) => t.assignee).filter(Boolean))];
+        if (!teamViewUser && names.length) teamViewUser = names[0];
+        document.getElementById("team-tabs").innerHTML = names
+          .map(
+            (u) =>
+              `<div class="user-tab ${u === teamViewUser ? "active" : ""}" onclick="setTeamUser('${u}')">${esc(u)}</div>`,
+          )
+          .join("");
+        const t = sortTasks(tasks.filter((x) => x.assignee === teamViewUser));
+        document.getElementById("team-tasks-list").innerHTML =
+          t.map(taskCardHTML).join("") ||
+          emptyState(`No tasks assigned to ${esc(teamViewUser)}.`);
+      }
+      function setTeamUser(u) {
+        teamViewUser = u;
+        renderTeam();
+      }
+
+      // ═══════════════════════════════════════════════
+      // ALL TASKS
+      // ═══════════════════════════════════════════════
+      function renderAllTasks() {
+        updateBadges();
+        let t = [...tasks];
+        if (filters.all !== "all")
+          t = t.filter((x) => x.status === filters.all);
+        if (searches.all)
+          t = t.filter(
+            (x) =>
+              x.title.toLowerCase().includes(searches.all.toLowerCase()) ||
+              (x.assignee || "")
+                .toLowerCase()
+                .includes(searches.all.toLowerCase()),
+          );
+        document.getElementById("all-tasks-list").innerHTML =
+          sortTasks(t).map(taskCardHTML).join("") ||
+          emptyState("No tasks match this filter.");
+      }
+
+      // ═══════════════════════════════════════════════
+      // BOARD
+      // ═══════════════════════════════════════════════
+      function renderBoard() {
+        updateBadges();
+        document.getElementById("kanban-board").innerHTML = STATUSES.map(
+          (s) => {
+            const col = tasks.filter((t) => t.status === s);
+            return `<div class="kanban-col">
+          <div class="kanban-col-header"><div class="kanban-col-title">${STATUS_LABELS[s]}</div><div class="kanban-count">${col.length}</div></div>
+          ${col
+            .map(
+              (t) => `<div class="kanban-task" onclick="openTask('${t.id}')">
+            <div class="kanban-task-title">${esc(t.title)}</div>
+            <div class="kanban-task-foot">
+              <span style="font-size:10px;color:var(--muted)">${esc(t.assignee || "")}</span>
+              ${t.dueDate ? `<span style="font-size:10px" class="${dateStatus(t.dueDate)}">${fmtDate(t.dueDate)}</span>` : ""}
+            </div>
+          </div>`,
+            )
+            .join("")}
+        </div>`;
+          },
+        ).join("");
+      }
+
+      // ═══════════════════════════════════════════════
+      // NEW TASK
+      // ═══════════════════════════════════════════════
+      function openNewTask() {
+        document.getElementById("modal-title").textContent = "New Task";
+        document.getElementById("modal-body").innerHTML = taskFormHTML(null);
+        document.getElementById("taskModal").classList.add("open");
+      }
+
+      function taskFormHTML(taskId) {
+        const t = taskId ? tasks.find((x) => x.id === taskId) : {};
+        const isEdit = !!taskId;
+        const owned = !isEdit || canEdit(t);
+        const names =
+          Object.values(ALLOWED_USERS).length > 0
+            ? Object.values(ALLOWED_USERS)
+            : [
+                ...new Set(
+                  [currentUser?.name, ...tasks.map((x) => x.assignee)].filter(
+                    Boolean,
+                  ),
+                ),
+              ];
+
+        return `<div class="form-grid">
+        <div class="form-group span2">
+          <label class="lbl">Task Title</label>
+          <input type="text" id="ft-title" placeholder="What needs to be done?" value="${esc(t.title || "")}" ${!owned ? "disabled" : ""}>
+        </div>
+        <div class="form-group">
+          <label class="lbl">Status</label>
+          <select id="ft-status" ${!owned ? "disabled" : ""}>
+            ${STATUSES.map((s) => `<option value="${s}" ${(t.status || "idea") === s ? "selected" : ""}>${STATUS_LABELS[s]}</option>`).join("")}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="lbl">Priority</label>
+          <select id="ft-priority" ${!owned ? "disabled" : ""}>
+            ${PRIORITIES.map((p) => `<option value="${p}" ${(t.priority || "none") === p ? "selected" : ""}>${p.charAt(0).toUpperCase() + p.slice(1)}</option>`).join("")}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="lbl">Assigned To${isEdit && !owned ? ' <span style="color:var(--muted2)">(locked)</span>' : ""}</label>
+          ${
+            isEdit && !owned
+              ? `<input type="text" value="${esc(t.assignee || "")}" disabled><input type="hidden" id="ft-assignee" value="${esc(t.assignee || "")}">`
+              : `<select id="ft-assignee">${names.map((u) => `<option value="${u}" ${(t.assignee || currentUser?.name) === u ? "selected" : ""}>${u}</option>`).join("")}</select>`
+          }
+        </div>
+        <div class="form-group">
+          <label class="lbl">Start Date</label>
+          <input type="date" id="ft-start" value="${t.startDate || ""}" ${!owned ? "disabled" : ""}>
+        </div>
+        <div class="form-group">
+          <label class="lbl">Due Date</label>
+          <input type="date" id="ft-due" value="${t.dueDate || ""}" ${!owned ? "disabled" : ""}>
+        </div>
+        <div class="form-group span2">
+          <label class="lbl">Description</label>
+          <textarea id="ft-desc" placeholder="Context, links, details…" ${!owned ? "disabled" : ""}>${esc(t.description || "")}</textarea>
+        </div>
+      </div>
+      ${!owned ? `<div style="background:rgba(201,96,96,.07);border:1px solid rgba(201,96,96,.2);border-radius:var(--radius);padding:10px 14px;font-size:11px;color:var(--muted);margin-top:8px">🔒 This task belongs to <strong style="color:var(--text)">${esc(t.assignee)}</strong>. You can view and add notes, but cannot edit its fields.</div>` : ""}
+      <div class="form-actions">
+        ${isEdit && owned ? `<button class="btn btn-danger btn-sm" onclick="deleteTask('${taskId}')">Delete</button>` : ""}
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        ${owned ? `<button class="btn btn-primary" onclick="${isEdit ? `saveEdit('${taskId}')` : "saveNew()"}'">${isEdit ? "Save Changes" : "Create Task"}</button>` : ""}
+      </div>`;
+      }
+
+      async function saveNew() {
+        const title = document.getElementById("ft-title").value.trim();
+        if (!title) {
+          alert("Please enter a task title.");
+          return;
+        }
+        const task = {
+          id: genId(),
+          title,
+          status: document.getElementById("ft-status").value,
+          priority: document.getElementById("ft-priority").value,
+          assignee: document.getElementById("ft-assignee").value,
+          startDate: document.getElementById("ft-start").value || null,
+          dueDate: document.getElementById("ft-due").value || null,
+          description: document.getElementById("ft-desc").value.trim(),
+        };
+        closeModal();
+        setSyncing(true);
+        try {
+          await dbCreateTask(task);
+          await refreshData();
+          showSyncOk();
+        } catch (e) {
+          showSyncError("Save failed: " + e.message);
+          setSyncing(false);
+        }
+      }
+
+      // ═══════════════════════════════════════════════
+      // VIEW / EDIT TASK
+      // ═══════════════════════════════════════════════
+      function openTask(id) {
+        const task = tasks.find((t) => t.id === id);
+        if (!task) return;
+        document.getElementById("modal-title").textContent = "";
+        document.getElementById("modal-body").innerHTML = taskDetailHTML(task);
+        document.getElementById("taskModal").classList.add("open");
+      }
+
+      function taskDetailHTML(task) {
+        const sb2 = STATUS_BADGE[task.status] || "";
+        const ds = dateStatus(task.dueDate);
+        const owned = canEdit(task);
+        const taskNotes = task.notes || [];
+        return `
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+        <span class="badge ${sb2}">${STATUS_LABELS[task.status] || task.status}</span>
+        <span style="font-size:10px;color:var(--muted)">👤 ${esc(task.assignee || "Unassigned")}</span>
+        <span style="font-size:10px;color:var(--muted)">⬆ ${task.priority || "none"}</span>
+        ${
+          owned
+            ? `<button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="editTask('${task.id}')">✎ Edit</button>`
+            : `<span style="margin-left:auto;font-size:10px;color:var(--muted2)">🔒 ${esc(task.assignee)}'s task</span>`
+        }
+      </div>
+      <div style="font-family:var(--font-d);font-size:22px;color:var(--text);margin-bottom:16px;line-height:1.3">${esc(task.title)}</div>
+      <div class="detail-grid" style="margin-bottom:16px">
+        <div class="detail-item"><div class="detail-label">Start Date</div><div class="detail-value">${fmtDate(task.startDate)}</div></div>
+        <div class="detail-item"><div class="detail-label">Due Date</div><div class="detail-value ${ds}">${fmtDate(task.dueDate)}</div></div>
+        <div class="detail-item"><div class="detail-label">Created</div><div class="detail-value">${fmtDate(task.created)}</div></div>
+        ${task.updated ? `<div class="detail-item"><div class="detail-label">Updated</div><div class="detail-value">${fmtDate(task.updated)}</div></div>` : ""}
+      </div>
+      ${task.description ? `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:8px;white-space:pre-wrap">${esc(task.description)}</div>` : ""}
+      <div class="detail-section">
+        <div class="detail-section-title">Progress Notes (${taskNotes.length})</div>
+        <div class="notes-list" id="notes-list-${task.id}">
+          ${
+            taskNotes.length
+              ? taskNotes.slice().reverse().map(noteHTML).join("")
+              : '<div style="color:var(--muted2);font-size:12px;padding:8px 0">No notes yet.</div>'
+          }
+        </div>
+        <div class="note-add-row" style="margin-top:12px">
+          <textarea id="new-note-${task.id}" placeholder="Add a progress note…"></textarea>
+          <button class="btn btn-primary" style="align-self:flex-end" onclick="addNote('${task.id}')">Add</button>
+        </div>
+        <div style="font-size:10px;color:var(--muted2);margin-top:6px">Adding as: <span style="color:var(--gold)">${esc(currentUser?.name)}</span></div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        ${owned ? `<button class="btn btn-danger btn-sm" onclick="deleteTask('${task.id}')">Delete</button>` : ""}
+        <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+        ${owned ? `<button class="btn btn-primary btn-sm" onclick="cycleStatus('${task.id}')">Change Status</button>` : ""}
+      </div>`;
+      }
+
+      function noteHTML(n) {
+        return `<div class="note-item">
+        <div class="note-meta">
+          <span style="color:var(--gold)">${esc(n.author)}</span>
+          <span>${timeAgo(n.created_at || n.date)}</span>
+          <span>${new Date(n.created_at || n.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+        </div>
+        <div class="note-body">${esc(n.text)}</div>
+      </div>`;
+      }
+
+      function editTask(id) {
+        document.getElementById("modal-title").textContent = "Edit Task";
+        document.getElementById("modal-body").innerHTML = taskFormHTML(id);
+      }
+
+      async function saveEdit(id) {
+        const title = document.getElementById("ft-title").value.trim();
+        if (!title) {
+          alert("Please enter a task title.");
+          return;
+        }
+        const existing = tasks.find((t) => t.id === id);
+        if (!existing || !canEdit(existing)) {
+          alert("You can only edit your own tasks.");
+          return;
+        }
+        const task = {
+          ...existing,
+          title,
+          status: document.getElementById("ft-status").value,
+          priority: document.getElementById("ft-priority").value,
+          assignee: canEdit(existing)
+            ? document.getElementById("ft-assignee").value
+            : existing.assignee,
+          startDate: document.getElementById("ft-start").value || null,
+          dueDate: document.getElementById("ft-due").value || null,
+          description: document.getElementById("ft-desc").value.trim(),
+        };
+        closeModal();
+        setSyncing(true);
+        try {
+          await dbUpdateTask(task);
+          await refreshData();
+          showSyncOk();
+        } catch (e) {
+          showSyncError("Save failed: " + e.message);
+          setSyncing(false);
+        }
+      }
+
+      async function cycleStatus(id) {
+        const task = tasks.find((t) => t.id === id);
+        if (!task || !canEdit(task)) {
+          alert("You can only change status on your own tasks.");
+          return;
+        }
+        const next =
+          STATUSES[(STATUSES.indexOf(task.status) + 1) % STATUSES.length];
+        const updated = { ...task, status: next };
+        document.getElementById("modal-body").innerHTML = taskDetailHTML({
+          ...updated,
+          notes: task.notes,
+        });
+        setSyncing(true);
+        try {
+          await dbUpdateTask(updated);
+          await refreshData();
+          showSyncOk();
+        } catch (e) {
+          showSyncError("Status update failed: " + e.message);
+          setSyncing(false);
+        }
+      }
+
+      async function addNote(taskId) {
+        const ta = document.getElementById("new-note-" + taskId);
+        const text = ta.value.trim();
+        if (!text) return;
+        const note = {
+          id: genId(),
+          taskId,
+          task_id: taskId,
+          author: currentUser?.name,
+          date: new Date().toISOString(),
+          text,
+        };
+        ta.value = "";
+        // Optimistic update
+        const task = tasks.find((t) => t.id === taskId);
+        if (task) {
+          task.notes = [...(task.notes || []), note];
+        }
+        const list = document.getElementById("notes-list-" + taskId);
+        if (list)
+          list.innerHTML = (task?.notes || [])
+            .slice()
+            .reverse()
+            .map(noteHTML)
+            .join("");
+        try {
+          await dbAddNote(note);
+          await refreshData();
+        } catch (e) {
+          showSyncError("Note failed: " + e.message);
+        }
+      }
+
+      async function deleteTask(id) {
+        const task = tasks.find((t) => t.id === id);
+        if (task && !canEdit(task)) {
+          alert("You can only delete your own tasks.");
+          return;
+        }
+        if (!confirm("Delete this task? This cannot be undone.")) return;
+        closeModal();
+        setSyncing(true);
+        try {
+          await dbDeleteTask(id);
+          await refreshData();
+          showSyncOk();
+        } catch (e) {
+          showSyncError("Delete failed: " + e.message);
+          setSyncing(false);
+        }
+      }
+
+      // ═══════════════════════════════════════════════
+      // MODAL HELPERS
+      // ═══════════════════════════════════════════════
+      function closeModal() {
+        document.getElementById("taskModal").classList.remove("open");
+      }
+      function maybeCloseModal(e) {
+        if (e.target === document.getElementById("taskModal")) closeModal();
+      }
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeModal();
+      });
+
+      // ═══════════════════════════════════════════════
+      // BOOT
+      // ═══════════════════════════════════════════════
+      initAuth();
+    </script>
+  </body>
+</html>
